@@ -1,0 +1,121 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# =====================================================================
+# DevLake + Grafana 올인원 로컬 스택
+# Apache DevLake main 브랜치 기반 로컬 백엔드 이미지 + MySQL 기준
+# 콜로 엔지니어링팀 DORA 메트릭 PoC 환경
+# =====================================================================
+# 기동: docker compose up -d
+# 정지: docker compose down       (데이터 유지)
+# 초기화: docker compose down -v  (데이터 삭제)
+# =====================================================================
+
+services:
+  # ---------------------------------------------------------------------
+  # MySQL 8 — DevLake가 수집한 모든 데이터의 영속 저장소
+  # Grafana도 이 DB를 데이터 소스로 사용
+  # ---------------------------------------------------------------------
+  mysql:
+    image: mysql:8
+    container_name: devlake-mysql
+    restart: always
+    ports:
+      - "127.0.0.1:3306:3306"   # 외부 노출 차단, 로컬에서만 접근
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: lake
+      MYSQL_USER: merico
+      MYSQL_PASSWORD: merico
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+      - --skip-log-bin
+    volumes:
+      - mysql-storage:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------
+  # DevLake 백엔드 — 데이터 수집·변환 엔진 (API: 8080)
+  # GitHub GraphQL Collect Issues 수정이 포함된 main 브랜치 로컬 빌드
+  # ---------------------------------------------------------------------
+  devlake:
+    image: devlake-local:main
+    container_name: devlake
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./.env
+    environment:
+      LOGGING_DIR: /app/logs
+      TZ: Asia/Seoul
+    volumes:
+      - devlake-log:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------
+  # Config UI — 데이터 소스·프로젝트·Blueprint 설정 화면 (Web: 4000)
+  # ---------------------------------------------------------------------
+  config-ui:
+    image: devlake.docker.scarf.sh/apache/devlake-config-ui:v1.0.3-beta12
+    container_name: devlake-config-ui
+    restart: always
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./.env
+    environment:
+      DEVLAKE_ENDPOINT: devlake:8080
+      GRAFANA_ENDPOINT: grafana:3000
+      TZ: Asia/Seoul
+    depends_on:
+      - devlake
+
+  # ---------------------------------------------------------------------
+  # Grafana — DORA 빌트인 대시보드 포함 시각화 (Web: 3002)
+  # 초기 계정: admin / admin
+  # ---------------------------------------------------------------------
+  grafana:
+    image: devlake.docker.scarf.sh/apache/devlake-dashboard:v1.0.3-beta12
+    container_name: devlake-grafana
+    restart: always
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SERVER_ROOT_URL: "http://localhost:4000/grafana"
+      GF_USERS_DEFAULT_THEME: "light"
+      MYSQL_URL: mysql:3306
+      MYSQL_DATABASE: lake
+      MYSQL_USER: merico
+      MYSQL_PASSWORD: merico
+      TZ: Asia/Seoul
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-storage:
+  grafana-storage:
+  devlake-log:
