@@ -133,7 +133,10 @@ Grafana(`http://localhost:3002`) 좌측 메뉴 `Dashboards` → `DORA` 폴더에
 make down
 
 # DevLake DB 백업
-make backup
+make db-backup
+
+# DevLake DB 복원
+make db-restore BACKUP=/path/to/lake-backup.sql.gz
 
 # 컨테이너 로그 확인
 make logs-devlake
@@ -141,6 +144,7 @@ make logs-devlake
 
 백업 파일은 기본적으로 `backups/lake-backup-YYYYMMDD-HHMMSS.sql.gz` 형식으로 생성됩니다.
 DevLake backend가 `_devlake_locking_stub` 메타데이터 락을 잡고 있을 수 있어, 백업 스크립트는 `devlake` 컨테이너만 잠깐 내린 뒤 MySQL 덤프를 뜨고 다시 올립니다.
+복원 스크립트도 backend를 먼저 멈춘 뒤 `lake` DB를 교체하고, 성공한 경우에만 backend를 다시 올립니다.
 
 `Makefile`은 기존 DB 볼륨을 재사용하기 위해 compose project 이름을 `devlake-local-docker-compose`로 고정합니다.
 볼륨을 삭제하는 명령은 실수 방지를 위해 제공하지 않습니다.
