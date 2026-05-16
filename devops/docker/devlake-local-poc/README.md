@@ -136,7 +136,7 @@ make down
 make db-backup
 
 # DevLake DB 복원
-make db-restore BACKUP=/path/to/lake-backup.sql.gz
+make db-restore BACKUP_FILEPATH=/path/to/lake-backup.sql.gz
 
 # 컨테이너 로그 확인
 make logs-devlake

@@ -18,7 +18,7 @@ COMPOSE := docker compose -p $(PROJECT)
 REPO_ROOT := $(abspath ../../..)
 SHA := $(shell git -C $(REPO_ROOT) rev-parse --short=8 HEAD)
 PLATFORM ?= linux/arm64
-BACKUP ?= $(FILE)
+BACKUP_FILEPATH ?=
 
 .PHONY: help up down restart ps logs logs-devlake logs-mysql db-backup db-restore config build
 
@@ -37,7 +37,7 @@ help:
 	@printf '%s\n' '  make logs-devlake Follow DevLake backend logs'
 	@printf '%s\n' '  make logs-mysql   Follow MySQL logs'
 	@printf '%s\n' '  make db-backup    Create a gzip DB backup under ./backups'
-	@printf '%s\n' '  make db-restore BACKUP=/path/to/lake-backup.sql.gz'
+	@printf '%s\n' '  make db-restore  Restore DB from a backup file'
 	@printf '%s\n' '  make config       Validate the compose configuration'
 	@printf '%s\n' '  make build        Build devlake-local:main from this fork'
 	@printf '%s\n' ''
@@ -67,8 +67,8 @@ db-backup:
 	COMPOSE_PROJECT_NAME=$(PROJECT) ./scripts/backup-devlake-db.sh
 
 db-restore:
-	@test -n "$(BACKUP)" || (printf '%s\n' 'Usage: make db-restore BACKUP=/path/to/lake-backup.sql.gz' >&2; exit 2)
-	COMPOSE_PROJECT_NAME=$(PROJECT) ./scripts/restore-devlake-db.sh "$(BACKUP)"
+	@test -n "$(BACKUP_FILEPATH)" || (printf '%s\n' 'Usage: make db-restore BACKUP_FILEPATH=/path/to/lake-backup.sql.gz' >&2; exit 2)
+	COMPOSE_PROJECT_NAME=$(PROJECT) ./scripts/restore-devlake-db.sh "$(BACKUP_FILEPATH)"
 
 config:
 	$(COMPOSE) config --quiet
