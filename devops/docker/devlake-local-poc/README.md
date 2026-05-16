@@ -51,19 +51,10 @@ openssl rand -base64 2000 | tr -dc 'A-Z' | fold -w 128 | head -n 1
 GitHub GraphQL `Collect Issues` 실패 수정이 포함된 DevLake main 백엔드 이미지를 로컬에서 빌드합니다.
 
 ```bash
-cd /path/to/incubator-devlake-fork
-
-SHA=$(git rev-parse --short=8 HEAD)
-docker buildx build --load --platform linux/arm64 \
-  -t devlake-local:main \
-  -t devlake-local:main-${SHA} \
-  --build-arg TAG=main \
-  --build-arg SHA=${SHA} \
-  -f devops/docker/devlake-local-poc/Dockerfile.devlake-main-local \
-  backend
+make build
 ```
 
-Intel/AMD 머신에서는 `--platform linux/amd64`로 변경하세요.
+Intel/AMD 머신에서는 `PLATFORM=linux/amd64 make build`을 사용하세요.
 
 현재 로컬 빌드 기준 커밋은 `420e494b`입니다.
 로컬 이미지는 GitHub 수집과 DORA/Issue Trace 프로젝트 메트릭에 필요한 Go 플러그인만 포함해 빌드합니다:
@@ -73,10 +64,10 @@ Intel/AMD 머신에서는 `--platform linux/amd64`로 변경하세요.
 
 ```bash
 cd devops/docker/devlake-local-poc
-docker compose up -d
+make up
 ```
 
-초기 부팅에 30~60초 정도 소요됩니다. (`docker compose logs -f devlake`로 진행 확인 가능)
+초기 부팅에 30~60초 정도 소요됩니다. (`make logs-devlake`로 진행 확인 가능)
 
 ### 5. UI 접속
 
@@ -139,20 +130,20 @@ Grafana(`http://localhost:3002`) 좌측 메뉴 `Dashboards` → `DORA` 폴더에
 
 ```bash
 # 정지 (볼륨 유지)
-docker compose down
+make down
 
 # DevLake DB 백업
-scripts/backup-devlake-db.sh
-
-# 데이터까지 모두 삭제
-docker compose down -v
+make backup
 
 # 컨테이너 로그 확인
-docker compose logs -f devlake
+make logs-devlake
 ```
 
 백업 파일은 기본적으로 `backups/lake-backup-YYYYMMDD-HHMMSS.sql.gz` 형식으로 생성됩니다.
 DevLake backend가 `_devlake_locking_stub` 메타데이터 락을 잡고 있을 수 있어, 백업 스크립트는 `devlake` 컨테이너만 잠깐 내린 뒤 MySQL 덤프를 뜨고 다시 올립니다.
+
+`Makefile`은 기존 DB 볼륨을 재사용하기 위해 compose project 이름을 `devlake-local-docker-compose`로 고정합니다.
+볼륨을 삭제하는 명령은 실수 방지를 위해 제공하지 않습니다.
 
 ---
 
