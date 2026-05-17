@@ -19,6 +19,7 @@ REPO_ROOT := $(abspath ../../..)
 SHA := $(shell git -C $(REPO_ROOT) rev-parse --short=8 HEAD)
 PLATFORM ?= linux/arm64
 BACKUP_FILEPATH ?=
+DEVLAKE_PLUGINS ?= github,github_graphql,gitextractor,org,dora,issue_trace,refdiff,jira,webhook,jenkins,argocd
 
 .PHONY: help up down restart ps logs logs-devlake logs-mysql db-backup db-restore config build
 
@@ -79,5 +80,6 @@ build:
 		-t devlake-local:main-$(SHA) \
 		--build-arg TAG=main \
 		--build-arg SHA=$(SHA) \
+		--build-arg DEVLAKE_PLUGINS=$(DEVLAKE_PLUGINS) \
 		-f Dockerfile.devlake-main-local \
 		$(REPO_ROOT)/backend

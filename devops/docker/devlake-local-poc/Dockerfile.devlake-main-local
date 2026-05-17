@@ -55,7 +55,7 @@ ENV GOBIN=/app/bin
 
 ARG TAG=main
 ARG SHA=local
-ARG DEVLAKE_PLUGINS=github,github_graphql,gitextractor,org,dora,issue_trace,refdiff,jira,webhook,jenkins
+ARG DEVLAKE_PLUGINS=github,github_graphql,gitextractor,org,dora,issue_trace,refdiff,jira,webhook,jenkins,argocd
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     VERSION="${TAG}@${SHA}" make build-server
